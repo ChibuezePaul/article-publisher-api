@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: article-publisher
+  datasource:
+    url: jdbc:postgresql://localhost:5432/article_publisher
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+  flyway:
+    baseline-on-migrate: true
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+    url: ${spring.datasource.url}
+
+springdoc:
+  swagger-ui:
+    operations-sorter: method
+    path: /swagger-ui
+  show-actuator: true
+
+api:
+  info:
+    title: Article Publisher API
+    description: API for the article publisher system
+    version: 1.0
