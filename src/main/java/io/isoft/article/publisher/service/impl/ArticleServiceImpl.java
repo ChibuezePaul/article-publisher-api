@@ -1,6 +1,6 @@
 package io.isoft.article.publisher.service.impl;
 
-import io.isoft.article.publisher.controller.CreateArticleRequest;
+import io.isoft.article.publisher.models.request.CreateArticleRequest;
 import io.isoft.article.publisher.enums.Status;
 import io.isoft.article.publisher.exception.CustomException;
 import io.isoft.article.publisher.models.dto.ApiResponse;
@@ -14,16 +14,14 @@ import io.isoft.article.publisher.models.request.UpdateArticleRequest;
 import io.isoft.article.publisher.repository.ArticleRepository;
 import io.isoft.article.publisher.service.ArticleService;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.data.domain.Example;
-import org.springframework.data.domain.ExampleMatcher;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +30,7 @@ public class ArticleServiceImpl implements ArticleService {
     private final ArticleRepository articleRepository;
 
     @Override
-    public ApiResponse createArticle(CreateArticleRequest articleRequest) {
+    public ApiResponse<ArticleDto> createArticle(CreateArticleRequest articleRequest) {
         Article article = Article.builder()
                 .title(articleRequest.title())
                 .content(articleRequest.content())
@@ -42,11 +40,11 @@ public class ArticleServiceImpl implements ArticleService {
 
         articleRepository.save(article);
 
-        return new ApiResponse("Article Created Successfully", toDto(article));
+        return new ApiResponse<>("Article Created Successfully", toDto(article));
     }
 
     @Override
-    public ApiResponse addPublishersToArticle(long id, ArticlePublishersRequest publishersRequest) throws CustomException {
+    public ApiResponse<ArticleDto> addPublishersToArticle(long id, ArticlePublishersRequest publishersRequest) throws CustomException {
         Article article = findArticleById(id);
 
         if (Status.PUBLISHED.equals(article.getStatus())) {
@@ -56,11 +54,11 @@ public class ArticleServiceImpl implements ArticleService {
         article.getPublishers().addAll(publishersRequest.publishers());
         articleRepository.save(article);
 
-        return new ApiResponse("Publishers Successfully Added To Article", toDto(article));
+        return new ApiResponse<>("Publishers Successfully Added To Article", toDto(article));
     }
 
     @Override
-    public ApiResponse addAuthorsToArticle(Long id, ArticleAuthorsRequest authorsRequest) throws CustomException {
+    public ApiResponse<ArticleDto> addAuthorsToArticle(Long id, ArticleAuthorsRequest authorsRequest) throws CustomException {
         Article article = findArticleById(id);
 
         if (!Status.CREATED.equals(article.getStatus())) {
@@ -70,11 +68,11 @@ public class ArticleServiceImpl implements ArticleService {
         article.getAuthors().addAll(authorsRequest.authors());
         articleRepository.save(article);
 
-        return new ApiResponse("Authors Successfully Added To Article", toDto(article));
+        return new ApiResponse<>("Authors Successfully Added To Article", toDto(article));
     }
 
     @Override
-    public ApiResponse removeAuthorFromArticle(Long id, RemoveAuthorRequest removeAuthorRequest) throws CustomException {
+    public ApiResponse<ArticleDto> removeAuthorFromArticle(Long id, RemoveAuthorRequest removeAuthorRequest) throws CustomException {
         Article article = findArticleById(id);
         String authorToBeRemoved = removeAuthorRequest.author().trim();
         if (!article.getAuthors().contains(authorToBeRemoved)) {
@@ -83,11 +81,11 @@ public class ArticleServiceImpl implements ArticleService {
         article.getAuthors().removeIf(author -> author.trim().equalsIgnoreCase(authorToBeRemoved));
         articleRepository.save(article);
 
-        return new ApiResponse("Author Successfully Removed From Article", toDto(article));
+        return new ApiResponse<>("Author Successfully Removed From Article", toDto(article));
     }
 
     @Override
-    public ApiResponse publishArticle(Long id) throws CustomException {
+    public ApiResponse<ArticleDto> publishArticle(Long id) throws CustomException {
         Article article = findArticleById(id);
 
         if (Status.PUBLISHED.equals(article.getStatus())) {
@@ -106,11 +104,11 @@ public class ArticleServiceImpl implements ArticleService {
         article.setStatus(Status.PUBLISHED);
         articleRepository.save(article);
 
-        return new ApiResponse("Article Successfully Published", toDto(article));
+        return new ApiResponse<>("Article Successfully Published", toDto(article));
     }
 
     @Override
-    public ApiResponse unpublishArticle(Long id) throws CustomException {
+    public ApiResponse<ArticleDto> unpublishArticle(Long id) throws CustomException {
         Article article = findArticleById(id);
 
         if (!Status.PUBLISHED.equals(article.getStatus())) {
@@ -118,11 +116,11 @@ public class ArticleServiceImpl implements ArticleService {
         }
         article.setStatus(Status.UNPUBLISHED);
         articleRepository.save(article);
-        return new ApiResponse("Article Successfully Unpublished", toDto(article));
+        return new ApiResponse<>("Article Successfully Unpublished", toDto(article));
     }
 
     @Override
-    public ApiResponse deleteArticle(Long id) throws CustomException {
+    public ApiResponse<Void> deleteArticle(Long id) throws CustomException {
         Article article = findArticleById(id);
 
         if (Status.PUBLISHED.equals(article.getStatus())) {
@@ -130,11 +128,11 @@ public class ArticleServiceImpl implements ArticleService {
         }
 
         articleRepository.delete(article);
-        return new ApiResponse("Article Successfully Deleted", null);
+        return new ApiResponse<>("Article Successfully Deleted", null);
     }
 
     @Override
-    public ApiResponse updateArticle(Long id, UpdateArticleRequest updateArticleRequest) throws CustomException {
+    public ApiResponse<ArticleDto> updateArticle(Long id, UpdateArticleRequest updateArticleRequest) throws CustomException {
         Article article = findArticleById(id);
 
         if (Status.PUBLISHED.equals(article.getStatus())) {
@@ -153,25 +151,31 @@ public class ArticleServiceImpl implements ArticleService {
         }
 
         articleRepository.save(article);
-        return new ApiResponse("Article Successfully Updated", null);
+        return new ApiResponse<>("Article Successfully Updated", toDto(article));
     }
 
     @Override
-    public ApiResponse findAllArticle(SearchArticleRequest searchArticleRequest) {
-//        Example<Article> of = Example.of(new Article(), ExampleMatcher.matching()
-//                .withIgnoreCase()
-//                        .withMatcher(searchArticleRequest.author())
-//                .withNullHandler(ExampleMatcher.NullHandler.IGNORE));
+    public ApiResponse<List<ArticleDto>> findAllArticle(SearchArticleRequest searchArticleRequest) {
         PageRequest pageRequest = PageRequest.of(searchArticleRequest.page(), searchArticleRequest.size());
 
-        Page<Article> articles = articleRepository
-                .findArticleByDatePublishedAndAuthorsContainsIgnoreCaseAndPublishersContainsIgnoreCase(
-                searchArticleRequest.datePublished(),
-                searchArticleRequest.author(),
-                searchArticleRequest.publisher(),
-                pageRequest
-        );
-        return new ApiResponse("Article Successfully Retrieved", articles);
+        String author = StringUtils.isBlank(searchArticleRequest.author()) ? null : searchArticleRequest.author();
+        String publisher = StringUtils.isBlank(searchArticleRequest.publisher()) ? null : searchArticleRequest.publisher();
+        List<Article> articles = searchArticleRequest.datePublished() == null
+                ? articleRepository.findArticleBySearchRequest(
+                        author,
+                        publisher,
+                        pageRequest
+                )
+                : articleRepository.findArticleBySearchRequest(
+                        author,
+                        publisher,
+                        searchArticleRequest.datePublished(),
+                        pageRequest
+                );
+        List<ArticleDto> articleDtos = articles.stream()
+                .map(ArticleServiceImpl::toDto)
+                .toList();
+        return new ApiResponse<>("Article Successfully Retrieved", articleDtos);
     }
 
     private Article findArticleById(Long id) throws CustomException {

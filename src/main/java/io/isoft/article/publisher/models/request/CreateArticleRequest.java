@@ -1,4 +1,4 @@
-package io.isoft.article.publisher.controller;
+package io.isoft.article.publisher.models.request;
 
 import jakarta.validation.constraints.NotBlank;
 

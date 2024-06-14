@@ -30,7 +30,7 @@ public class UserServiceImpl implements UserService {
     private final JwtService jwtService;
 
     @Override
-    public ApiResponse register(RegisterRequest request) throws CustomException {
+    public ApiResponse<UserDto> register(RegisterRequest request) throws CustomException {
         String email = request.email().toLowerCase();
         if (userRepository.existsByEmail(email)) {
             throw new CustomException(HttpStatus.BAD_REQUEST, "User Already Exists");
@@ -46,11 +46,11 @@ public class UserServiceImpl implements UserService {
 
         var userDto = new UserDto();
         BeanUtils.copyProperties(user, userDto);
-        return new ApiResponse("User Successfully Created", userDto);
+        return new ApiResponse<>("User Successfully Created", userDto);
     }
 
     @Override
-    public ApiResponse authenticate(AuthenticationRequest request) {
+    public ApiResponse<UserDto> authenticate(AuthenticationRequest request) {
         Authentication authenticate = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.email().toLowerCase(),
@@ -64,6 +64,6 @@ public class UserServiceImpl implements UserService {
         BeanUtils.copyProperties(user, userDto);
         userDto.setToken(token);
 
-        return new ApiResponse("Login Successful", userDto);
+        return new ApiResponse<>("Login Successful", userDto);
     }
 }
